@@ -22,6 +22,16 @@ describe FitgemOauth2::Client do
     it 'raises error on invalid string' do
       expect { client.format_date('abcd') }.to raise_error(FitgemOauth2::InvalidDateArgument)
     end
+
+    it 'raises error on invalid object type' do
+      expect { client.format_date(12345) }.to raise_error(FitgemOauth2::InvalidDateArgument)
+      expect { client.format_date([]) }.to raise_error(FitgemOauth2::InvalidDateArgument)
+      expect { client.format_date({}) }.to raise_error(FitgemOauth2::InvalidDateArgument)
+    end
+
+    it 'handles nil input' do
+      expect(client.format_date(nil)).to be_nil
+    end
   end
 
   describe 'format_time' do
@@ -36,6 +46,10 @@ describe FitgemOauth2::Client do
 
     it 'raises error on nil argument' do
       expect { client.format_time(nil) }.to raise_error(FitgemOauth2::InvalidTimeArgument)
+    end
+
+    it 'returns valid time string as it is' do
+      expect(client.format_time('14:30')).to eq('14:30')
     end
   end
 end
