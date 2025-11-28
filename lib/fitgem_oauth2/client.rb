@@ -28,6 +28,35 @@ module FitgemOauth2
     attr_reader :user_id
     attr_reader :unit_system
 
+    # Initializes a new Fitbit API client
+    #
+    # @param opts [Hash] Configuration options for the client
+    # @option opts [String] :client_id The OAuth2 client ID for your Fitbit application
+    # @option opts [String] :client_secret The OAuth2 client secret for your Fitbit application
+    # @option opts [String] :token The OAuth2 access token for making authenticated requests
+    # @option opts [String] :user_id The Fitbit user ID (defaults to '-' for current user)
+    # @option opts [String] :unit_system The unit system to use ('en_US', 'metric', etc.)
+    #
+    # @note This client uses Faraday ~> 2.6 for HTTP operations. The connection is
+    #       automatically configured with the net_http adapter and URL encoding.
+    #
+    # @example Initialize with required parameters
+    #   client = FitgemOauth2::Client.new(
+    #     client_id: 'your_client_id',
+    #     client_secret: 'your_client_secret',
+    #     token: 'access_token'
+    #   )
+    #
+    # @example Initialize with all parameters
+    #   client = FitgemOauth2::Client.new(
+    #     client_id: 'your_client_id',
+    #     client_secret: 'your_client_secret',
+    #     token: 'access_token',
+    #     user_id: '123XYZ',
+    #     unit_system: 'metric'
+    #   )
+    #
+    # @raise [FitgemOauth2::InvalidArgumentError] If required options are missing
     def initialize(opts)
       missing = %i[client_id client_secret token] - opts.keys
       raise FitgemOauth2::InvalidArgumentError, "Missing required options: #{missing.join(',')}" unless missing.empty?
@@ -64,33 +93,81 @@ module FitgemOauth2
       JSON.parse(response.body)
     end
 
+    # Makes a GET request to the Fitbit API v1
+    #
+    # @param url [String] The API endpoint (without version prefix)
+    # @return [Hash] Parsed JSON response from the API
+    #
+    # @note Uses Faraday ~> 2.6 for HTTP requests with automatic authentication headers
+    # @example Get user profile
+    #   response = client.get_call('user/-/profile.json')
     def get_call(url)
       url = "#{API_VERSION}/#{url}"
       response = connection.get(url) {|request| set_headers(request) }
       parse_response(response)
     end
 
-    # This method is a helper method (like get_call) for 1.2 version of the API_VERSION
-    # This method is needed because Fitbit API supports both versions as of current
-    # date (Nov 5, 2017)
+    # Makes a GET request to the Fitbit API v1.2
+    #
+    # @param url [String] The API endpoint (without version prefix)
+    # @return [Hash] Parsed JSON response from the API
+    #
+    # @note This method is needed because Fitbit API supports both v1 and v1.2 as of current date
+    # @note Uses Faraday ~> 2.6 for HTTP requests with automatic authentication headers
+    # @example Get activity data
+    #   response = client.get_call_1_2('user/-/activities/date/today.json')
     def get_call_1_2(url)
       url = "1.2/#{url}"
       response = connection.get(url) {|request| set_headers(request) }
       parse_response(response)
     end
 
+    # Makes a POST request to the Fitbit API v1
+    #
+    # @param url [String] The API endpoint (without version prefix)
+    # @param params [Hash] Request parameters to be sent as form data
+    # @return [Hash] Parsed JSON response from the API
+    #
+    # @note Uses Faraday ~> 2.6 for HTTP requests with automatic authentication headers
+    # @example Log an activity
+    #   response = client.post_call('user/-/activities.json', {
+    #     activityName: 'Running',
+    #     durationMillis: 1800000
+    #   })
     def post_call(url, params={})
       url = "#{API_VERSION}/#{url}"
       response = connection.post(url, params) {|request| set_headers(request) }
       parse_response(response)
     end
 
+    # Makes a POST request to the Fitbit API v1.2
+    #
+    # @param url [String] The API endpoint (without version prefix)
+    # @param params [Hash] Request parameters to be sent as form data
+    # @return [Hash] Parsed JSON response from the API
+    #
+    # @note Uses Faraday ~> 2.6 for HTTP requests with automatic authentication headers
+    # @example Create a food log
+    #   response = client.post_call_1_2('user/-/foods/log.json', {
+    #     foodId: '12345',
+    #     mealTypeId: 1,
+    #     unitId: 1,
+    #     amount: 100.0
+    #   })
     def post_call_1_2(url, params={})
       url = "1.2/#{url}"
       response = connection.post(url, params) {|request| set_headers(request) }
       parse_response(response)
     end
 
+    # Makes a DELETE request to the Fitbit API v1
+    #
+    # @param url [String] The API endpoint (without version prefix)
+    # @return [Hash] Parsed JSON response from the API
+    #
+    # @note Uses Faraday ~> 2.6 for HTTP requests with automatic authentication headers
+    # @example Delete an activity log
+    #   response = client.delete_call('user/-/activities/12345.json')
     def delete_call(url)
       url = "#{API_VERSION}/#{url}"
       response = connection.delete(url) {|request| set_headers(request) }
