@@ -15,6 +15,7 @@ require 'fitgem_oauth2/version.rb'
 
 require 'base64'
 require 'faraday'
+require 'faraday/net_http'
 
 module FitgemOauth2
   class Client
@@ -36,7 +37,10 @@ module FitgemOauth2
       @token = opts[:token]
       @user_id = (opts[:user_id] || DEFAULT_USER_ID)
       @unit_system = opts[:unit_system]
-      @connection = Faraday.new('https://api.fitbit.com')
+      @connection = Faraday.new('https://api.fitbit.com') do |faraday|
+        faraday.request :url_encoded
+        faraday.adapter :net_http
+      end
     end
 
     def refresh_access_token(refresh_token)
@@ -108,15 +112,15 @@ module FitgemOauth2
 
       error_handler = {
         200 => lambda {
-          body = JSON.parse(response.body)
-          body = {body: body} if body.is_a?(Array)
+          parsed_body = JSON.parse(response.body)
+          result = parsed_body.is_a?(Array) ? {'body' => parsed_body} : parsed_body
           headers = response.headers.to_hash.keep_if do |k, _v|
             headers_to_keep.include? k
           end
-          body.merge!(headers)
+          result.merge!(headers)
         },
-        201 => -> {},
-        204 => -> {},
+        201 => -> { {} },
+        204 => -> { nil },
         400 => -> { raise FitgemOauth2::BadRequestError },
         401 => -> { raise FitgemOauth2::UnauthorizedError },
         403 => -> { raise FitgemOauth2::ForbiddenError },
@@ -126,11 +130,9 @@ module FitgemOauth2
       }
 
       fn = error_handler.find {|k, _| k === response.status }
-      if fn.nil?
-        raise StandardError, "Unexpected response status #{response.status}"
-      else
-        fn.last.call
-      end
+      raise StandardError, "Unexpected response status #{response.status}" if fn.nil?
+
+      fn.last.call
     end
   end
 end
